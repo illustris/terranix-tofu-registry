@@ -87,7 +87,9 @@
 				DIR=$(mktemp -d)
 				pushd $DIR
 				mkdir -p terraform.d/plugins/
-				ln -s ${pluginsDrv} terraform.d/plugins/${pluginsDrv.name}
+				# openTofu ignores symlinks at this level
+				# linking it a level above or below might be a solution
+				cp -r ${pluginsDrv} terraform.d/plugins/${pluginsDrv.name}
 				${script} $@
 				popd
 				${optionalString cleanup "rm -rf $DIR"}
