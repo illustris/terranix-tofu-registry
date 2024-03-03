@@ -76,12 +76,21 @@
 			];
 
 			wrapTofuScript = {
-				script,
-				pluginsDrv,
-				x ? true,
-				e ? false,
-				cleanup ? true
-			}: ''
+				system
+				, script
+				, pluginsDrv
+				, name ? "script"
+				, init ? false
+				, passArgsToScript ? true
+				, tofuPackage ? null
+				, x ? true
+				, e ? false
+				, cleanup ? true
+				, tfConfig ? null
+				, ...
+			}: let
+				pkgs = nixpkgs.legacyPackages.${system};
+			in pkgs.writers.writeBash name ''
 				${optionalString x "set -x"}
 				${optionalString e "set -e"}
 				DIR=$(mktemp -d)
@@ -90,10 +99,27 @@
 				# openTofu ignores symlinks at this level
 				# linking it a level above or below might be a solution
 				cp -r ${pluginsDrv} terraform.d/plugins/${pluginsDrv.name}
-				${script} $@
+				${optionalString (tfConfig != null) "cp ${tfConfig} ./config.tf.json"}
+				export PATH=${if tofuPackage == null then pkgs.opentofu else tofuPackage}/bin:$PATH
+				${optionalString init "tofu init"}
+				${script} ${optionalString passArgsToScript "$@"}
 				popd
 				${optionalString cleanup "rm -rf $DIR"}
 			'';
+
+			# the lib function you most likely want to use
+			# apps.x86_64-linux.plan = {
+			#   type = "app";
+			#   program = toString (registry.lib.tofuScriptWithPlugins {
+			#     system = "x86_64-linux";
+			#     plugins.bpg.proxmox = null;
+			#     script = "tofu plan";
+			#     tfConfig = self.packages.x86_64-linux.tf;
+			#   })
+			# }
+			tofuScriptWithPlugins = { system, plugins, ... }@args: self.lib.wrapTofuScript ({
+				pluginsDrv = self.lib.mkPluginsDir { inherit system plugins; };
+			} // args);
 		};
 
 		# This needs too much memory to evaluate
