@@ -93,7 +93,7 @@
 			in pkgs.writers.writeBash name ''
 				${optionalString x "set -x"}
 				${optionalString e "set -e"}
-				DIR=$(mktemp -d)
+				DIR=$(mktemp -d terranix.XXXXXXXXXX -p /tmp)
 				pushd $DIR
 				mkdir -p terraform.d/plugins/
 				# openTofu ignores symlinks at this level
@@ -104,7 +104,8 @@
 				${optionalString init "tofu init"}
 				${script} ${optionalString passArgsToScript "$@"}
 				popd
-				${optionalString cleanup "rm -rf $DIR"}
+				# symlinks to the nix store can't be cleaned up without sudo
+				${optionalString cleanup "rm -rf $DIR || (mkdir -p /tmp/terranix_cleanup && mv $DIR /tmp/terranix_cleanup)"}
 			'';
 
 			# the lib function you most likely want to use
