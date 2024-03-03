@@ -10,6 +10,7 @@
 	};
 
 	outputs = { self, nixpkgs, registry }: {
+
 		lib = nixpkgs.lib // {
 			# translate go arch to nix arch
 			archMap = json: {
@@ -49,6 +50,16 @@
 			) {};
 		};
 
+		# This needs too much memory to evaluate
+                # packages = with self.lib; pipe self.tofu [
+                #       (collect isDerivation)
+                #       (map (x: setAttrByPath [ x.system x.pname ] x))
+                #       (take 1000)
+                #       # (drop 100000)
+                #       # traceVal
+                #       (builtins.foldl' recursiveUpdate {})
+                # ];
+
 		tofu = with self.lib; {
 			providers = pipe "${registry}/providers" [
 				# get first level subdirs of providers path
@@ -76,32 +87,37 @@
 						];
 						# extract provider name from json filename
 						provider = strings.removeSuffix ".json" n;
-					in nameValuePair
-						namespace
-						{
-							${provider} = pipe "${p}/${n}" [
-								# read json into attrset
-								builtins.readFile
-								builtins.fromJSON
-								(attrByPath ["versions"] [])
-								# each version+arch corresponds to a list element
-								(map (x: nameValuePair x.version (pipe x.targets [
-									# drop unsupported architectures
-									(filter (x: elem x.arch ["arm64" "amd64"]))
-									(filter (x: elem x.os ["darwin" "linux"]))
-									# make attrsets with arch as key, and derivation as val
-									(map (y: nameValuePair (archMap y) (fetchTofuProv namespace provider x.version y)))
-									listToAttrs
-								])))
+					in {
+						# create an attrset with path and val
+						# this will be used to recursiveUpdate later
+						# listToAttrs will overwrite multiple providers in the same namespace
+						path = [
+							namespace
+							provider
+						];
+						val = (pipe "${p}/${n}" [
+							# read json into attrset
+							builtins.readFile
+							builtins.fromJSON
+							(attrByPath ["versions"] [])
+							# each version+arch corresponds to a list element
+							(map (x: nameValuePair x.version (pipe x.targets [
+								# drop unsupported architectures
+								(filter (x: elem x.arch ["arm64" "amd64"]))
+								(filter (x: elem x.os ["darwin" "linux"]))
+								# make attrsets with arch as key, and derivation as val
+								(map (y: nameValuePair (archMap y) (fetchTofuProv namespace provider x.version y)))
 								listToAttrs
-							];
-						}
-					))
+							])))
+							listToAttrs
+						]);
+					}))
 				]))
 				# flatten the list
 				flatten
-				# convert to attrset
-				listToAttrs
+				# merge list of attrsets
+				(map (x: setAttrByPath x.path x.val))
+				(builtins.foldl'  recursiveUpdate {})
 			];
 		};
 	};
