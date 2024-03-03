@@ -9,7 +9,7 @@
 		};
 	};
 
-	outputs = { self, nixpkgs, registry }: {
+	outputs = { self, nixpkgs, registry }: with self.lib; {
 
 		lib = nixpkgs.lib // {
 			# translate go arch to nix arch
@@ -18,7 +18,7 @@
 				arm64 = "aarch64";
 			}.${json.arch} + "-${json.os}";
 			# get subdirs for a given path
-			getSubDirs = with nixpkgs.lib; p: pipe p [
+			getSubDirs = p: pipe p [
 				# read contents of dir
 				builtins.readDir
 				# filter for dirs
@@ -48,10 +48,36 @@
 					};
 				}
 			) {};
+
+			getProvider = namespace: provider: version: system: let
+				p = self.tofu.providers.${namespace}.${provider};
+				v = (if version == null
+				     then (latest p)
+				     else version);
+			in p.${v}.${system};
+
+			latest = provider: pipe provider [
+				attrNames
+				(sort (a: b: builtins.compareVersions a b > 0))
+				head
+			];
+
+			mkPluginsDirFromDRVs = { system, name ? "terranix.local", postBuild ? "", ... }: paths:
+				nixpkgs.legacyPackages.${system}.symlinkJoin {
+					inherit name postBuild paths;
+				};
+
+			# nix-repl> (lib.mkPluginsDir {system="x86_64-linux"; plugins = {bpg.proxmox = null; gxben.opnsense = "0.3.1";};})
+			# «derivation /nix/store/n1y1sf226xm0y39cgvfyzs7769yqx86g-terranix.local.drv»
+			mkPluginsDir = { system, name ? null , postBuild ? null , plugins }@args: pipe plugins [
+				(mapAttrsRecursive (path: version: getProvider (head path) (last path) version system))
+				(collect isDerivation)
+				(mkPluginsDirFromDRVs args)
+			];
 		};
 
 		# This needs too much memory to evaluate
-                # packages = with self.lib; pipe self.tofu [
+                # packages = pipe self.tofu [
                 #       (collect isDerivation)
                 #       (map (x: setAttrByPath [ x.system x.pname ] x))
                 #       (take 1000)
@@ -60,7 +86,7 @@
                 #       (builtins.foldl' recursiveUpdate {})
                 # ];
 
-		tofu = with self.lib; {
+		tofu = {
 			providers = pipe "${registry}/providers" [
 				# get first level subdirs of providers path
 				getSubDirs
