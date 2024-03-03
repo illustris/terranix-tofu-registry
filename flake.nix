@@ -74,6 +74,24 @@
 				(collect isDerivation)
 				(mkPluginsDirFromDRVs args)
 			];
+
+			wrapTofuScript = {
+				script,
+				pluginsDrv,
+				x ? true,
+				e ? false,
+				cleanup ? true
+			}: ''
+				${optionalString x "set -x"}
+				${optionalString e "set -e"}
+				DIR=$(mktemp -d)
+				pushd $DIR
+				mkdir -p terraform.d/plugins/
+				ln -s ${pluginsDrv} terraform.d/plugins/${pluginsDrv.name}
+				${script} $@
+				popd
+				${optionalString cleanup "rm -rf $DIR"}
+			'';
 		};
 
 		# This needs too much memory to evaluate
