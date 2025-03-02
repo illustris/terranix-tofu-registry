@@ -2,11 +2,11 @@
   "nodes": {
     "nixpkgs": {
       "locked": {
-        "lastModified": 1739866667,
-        "narHash": "sha256-EO1ygNKZlsAC9avfcwHkKGMsmipUk1Uc0TbrEZpkn64=",
+        "lastModified": 1740695751,
+        "narHash": "sha256-D+R+kFxy1KsheiIzkkx/6L63wEHBYX21OIwlFV8JvDs=",
         "owner": "nixos",
         "repo": "nixpkgs",
-        "rev": "73cf49b8ad837ade2de76f87eb53fc85ed5d4680",
+        "rev": "6313551cd05425cd5b3e63fe47dbc324eabb15e4",
         "type": "github"
       },
       "original": {
@@ -19,11 +19,11 @@
     "registry": {
       "flake": false,
       "locked": {
-        "lastModified": 1740267128,
-        "narHash": "sha256-C1qwU40Uw1TNRMaEkOJpUNn/OiBuhqEybcjC7G+xYhM=",
+        "lastModified": 1740866486,
+        "narHash": "sha256-vD6s8FkXCmHmSCzZ28lWNt92z3UArwpE1w3+9maJfAA=",
         "owner": "opentofu",
         "repo": "registry",
-        "rev": "2092a558e7f2f2f429e952794d8e453e83f3ef3a",
+        "rev": "79e9429c13ebbceb7361cab43e3a4a860353c70a",
         "type": "github"
       },
       "original": {
