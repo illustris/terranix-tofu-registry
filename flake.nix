@@ -87,14 +87,15 @@
 				, e ? false
 				, cleanup ? true
 				, tfConfig ? null
+				, writer ? pkgs.writers.writeBash
 				, ...
 			}: let
 				pkgs = nixpkgs.legacyPackages.${system};
-			in pkgs.writers.writeBash name ''
+			in writer name ''
 				${optionalString x "set -x"}
 				${optionalString e "set -e"}
 				DIR=$(mktemp -d terranix.XXXXXXXXXX -p /tmp)
-				pushd $DIR
+				pushd "$DIR"
 				mkdir -p terraform.d/plugins/
 				# openTofu ignores symlinks at this level
 				# linking it a level above or below might be a solution
@@ -102,10 +103,10 @@
 				${optionalString (tfConfig != null) "cp ${tfConfig} ./config.tf.json"}
 				export PATH=${if tofuPackage == null then pkgs.opentofu else tofuPackage}/bin:$PATH
 				${optionalString init "tofu init"}
-				${script} ${optionalString passArgsToScript "$@"}
+				${script} ${optionalString passArgsToScript ''"$@"''}
 				popd
 				# symlinks to the nix store can't be cleaned up without sudo
-				${optionalString cleanup "rm -rf $DIR || (mkdir -p /tmp/terranix_cleanup && mv $DIR /tmp/terranix_cleanup)"}
+				${optionalString cleanup "rm -rf \"$DIR\" || (mkdir -p /tmp/terranix_cleanup && mv \"$DIR\" /tmp/terranix_cleanup)"}
 			'';
 
 			# the lib function you most likely want to use
