@@ -87,7 +87,7 @@
 				, e ? false
 				, cleanup ? true
 				, tfConfig ? null
-				, writer ? pkgs.writers.writeBash
+				, writer ? nixpkgs.legacyPackages.${system}.writers.writeBash
 				, ...
 			}: let
 				pkgs = nixpkgs.legacyPackages.${system};
